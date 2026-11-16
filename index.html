@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lâmpada para os Pés</title>
+<meta name="theme-color" content="#1B2A44">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Lâmpada">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<script src="firebase-config.js"></script>
+<style>
+:root{
+  --bg:#F2F4F7; --surface:#FFFFFF; --ink:#18202D; --muted:#5B6575; --line:#DCE1E8;
+  --dawn:#9A6B12; --dawn-soft:#F6EBD3; --sky:#35557D; --ok:#2F7A55;
+  --f-read:"Literata",Georgia,"Times New Roman",serif;
+  --f-ui:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0F141C; --surface:#171E29; --ink:#E6E9EF; --muted:#98A2B3; --line:#283243;
+  --dawn:#E2B65C; --dawn-soft:#2A2416; --sky:#8FB0DA; --ok:#6CC69A; color-scheme:dark}}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--f-ui);-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+.wrap{max-width:640px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(96px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--f-read);font-weight:600;text-wrap:balance;margin:0}
+p{margin:0}
+.eyebrow{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--dawn);font-weight:600}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.hint{font-size:14px;color:var(--muted)}
+.btn{font:600 15px var(--f-ui);border-radius:10px;padding:11px 16px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;align-self:flex-start}
+.btn.pri{background:var(--dawn);border-color:var(--dawn);color:var(--surface)}
+.btn.full{align-self:stretch;text-align:center}
+.btn:disabled{opacity:.5;cursor:default}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+textarea,input[type=text],input[type=password]{width:100%;font:16px/1.55 var(--f-read);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px}
+textarea{min-height:120px;resize:vertical}
+
+/* Painel */
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:8px 0 4px}
+.logo{width:64px;height:64px}
+.hero h1{font-size:32px;line-height:1.1}
+.hero .verse-sub{font-family:var(--f-read);font-style:italic;color:var(--muted);font-size:15px;max-width:34ch}
+.greet{font-size:14px;color:var(--muted)}
+.ringrow{display:flex;align-items:center;gap:18px}
+.ring{position:relative;width:104px;height:104px;flex:none}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .val{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font-variant-numeric:tabular-nums}
+.ring .val b{display:block;font:600 26px var(--f-read);line-height:1}
+.ring .val span{font-size:12px;color:var(--muted)}
+.today h2{font-size:22px;line-height:1.2}
+.today .ref{font-size:14px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.stat b{display:block;font:600 24px var(--f-read);font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.weeks{display:flex;flex-direction:column;gap:10px}
+.wkrow{display:flex;flex-direction:column;gap:4px}
+.wkrow .t{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+.wk{display:flex;gap:3px}
+.seg{flex:1;height:8px;border-radius:2px;background:var(--line);border:0;padding:0;cursor:pointer}
+.seg.done{background:var(--dawn)}
+.seg.sel{outline:2px solid var(--sky);outline-offset:2px}
+.memo{background:var(--dawn-soft);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:6px}
+.memo .r{font:600 18px var(--f-read)}
+.memo p{font-family:var(--f-read);font-style:italic}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:500 14px var(--f-ui);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 14px;cursor:pointer}
+.chip.on{background:var(--dawn);border-color:var(--dawn);color:var(--surface)}
+
+/* Dia */
+.dayhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.dayhead h2{font-size:26px;line-height:1.2}
+.wkname{font-size:13px;color:var(--muted)}
+.nav{display:flex;gap:6px}
+.icon{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--ink);font-size:18px;cursor:pointer}
+.icon:disabled{opacity:.35;cursor:default}
+.step{display:flex;gap:12px;align-items:flex-start}
+.num{flex:none;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--dawn);color:var(--dawn);font-size:13px;font-weight:600;display:grid;place-items:center}
+.step.ok .num{background:var(--dawn);color:var(--surface)}
+.step>div{min-width:0;display:flex;flex-direction:column;gap:8px;flex:1}
+.devo{display:flex;flex-direction:column;gap:16px;border-top:1px solid var(--line);padding-top:18px}
+.devo h3{font-size:22px}
+.sec{display:flex;flex-direction:column;gap:4px}
+.lbl{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.sec p{font-family:var(--f-read);font-size:17px;line-height:1.65;max-width:65ch}
+.sec p+p{margin-top:8px}
+.pray{background:var(--dawn-soft);border-radius:10px;padding:14px 16px}
+.pray p{font-style:italic}
+.verse{border-left:3px solid var(--dawn);padding-left:12px}
+.saved{font-size:12.5px;color:var(--muted);min-height:1em}
+
+/* Plano e diário */
+.plan{display:flex;flex-direction:column;gap:18px}
+.plan h3{font:600 13px var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.plan ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.plan li button{width:100%;display:flex;align-items:center;gap:12px;padding:12px 4px;background:none;border:0;border-bottom:1px solid var(--line);color:var(--ink);font:16px var(--f-read);text-align:left;cursor:pointer}
+.plan .d{font:600 13px var(--f-ui);color:var(--muted);width:46px;flex:none;font-variant-numeric:tabular-nums}
+.plan .tt{display:flex;flex-direction:column;min-width:0}
+.plan .tt small{font:13px var(--f-ui);color:var(--muted)}
+.plan .ck{margin-left:auto;color:var(--ok);font:14px var(--f-ui)}
+.plan li.cur button{color:var(--sky);font-weight:600}
+.entry{display:flex;flex-direction:column;gap:6px;border-bottom:1px solid var(--line);padding-bottom:14px}
+.entry:last-child{border-bottom:0;padding-bottom:0}
+.entry .h{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted)}
+.entry .h button{background:none;border:0;color:var(--sky);font:600 13px var(--f-ui);cursor:pointer;padding:0}
+.entry p{font-family:var(--f-read);white-space:pre-wrap}
+.answer{font-family:var(--f-read);font-size:16.5px;line-height:1.65;white-space:pre-wrap}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row input{flex:1;min-width:0}
+.msg{font-size:14px;color:var(--ok);min-height:1em}
+.foot{font-size:13px;color:var(--muted);text-align:center;font-family:var(--f-read);font-style:italic}
+
+/* Barra de abas */
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));z-index:10}
+.tabs .in{display:grid;grid-template-columns:repeat(5,1fr);width:100%;max-width:640px}
+.tab{background:none;border:0;color:var(--muted);font:500 11.5px var(--f-ui);display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;cursor:pointer}
+.tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tab[aria-current="page"]{color:var(--dawn)}
+/* Entrada / perfis */
+.lock{position:fixed;inset:0;z-index:50;background:var(--bg);overflow:auto;padding:calc(40px + env(safe-area-inset-top,0px)) 20px calc(30px + env(safe-area-inset-bottom,0px))}
+.lock .box{max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.plist{display:flex;flex-direction:column;gap:8px}
+.pbtn{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:600 17px var(--f-ui);cursor:pointer;text-align:left}
+.av{width:38px;height:38px;border-radius:50%;background:var(--dawn-soft);color:var(--dawn);display:grid;place-items:center;font:600 17px var(--f-read);flex:none}
+.pin{letter-spacing:.5em;text-align:center;font:600 24px var(--f-ui)!important}
+.err{color:#B3261E;font-size:14px;min-height:1em}
+@media (prefers-color-scheme:dark){.err{color:#F2B8B5}}
+.who{display:flex;align-items:center;justify-content:center;gap:10px;font-size:14px;color:var(--muted)}
+.link{background:none;border:0;color:var(--sky);font:600 14px var(--f-ui);cursor:pointer;padding:4px}
+@media (prefers-reduced-motion:no-preference){.view{animation:in .3s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- PAINEL -->
+<section class="view" id="v-inicio">
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <header class="hero">
+      <img class="logo" src="data:image/png;base64,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" alt="" style="border-radius:16px">
+      <h1>Lâmpada para os Pés</h1>
+      <p class="verse-sub">“Lâmpada para os meus pés é a tua palavra e luz para o meu caminho.” Salmo 119:105</p>
+      <p class="greet" id="greet"></p>
+      <div class="who" id="who" hidden><span id="whoName"></span><button class="link" id="sair">Sair</button></div>
+    </header>
+
+    <div class="card today">
+      <div class="ringrow">
+        <div class="ring" aria-hidden="true">
+          <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" stroke="var(--line)" stroke-width="9" fill="none"/><circle id="ringArc" cx="50" cy="50" r="42" stroke="var(--dawn)" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="263.9"/></svg>
+          <div class="val"><div><b id="ringN">0</b><span>de 28</span></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+          <span class="eyebrow" id="todayEyebrow">Hoje</span>
+          <h2 id="todayTitle"></h2>
+          <span class="ref" id="todayRef"></span>
+        </div>
+      </div>
+      <button class="btn pri full" id="goToday">Continuar a leitura</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b id="stDone">0</b><span>dias concluídos</span></div>
+      <div class="stat"><b id="stStreak">0</b><span>dias seguidos</span></div>
+      <div class="stat"><b id="stJournal">0</b><span>no diário</span></div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:19px">Plano · A volta de Jesus</h2>
+      <div class="weeks" id="weeks"></div>
+    </div>
+
+    <div class="memo">
+      <span class="lbl">Versículo para memorizar</span>
+      <span class="r" id="memoRef"></span>
+      <p id="memoTxt"></p>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:19px">Estou passando por…</h2>
+      <div class="chips" id="homeChips"></div>
+    </div>
+  </div>
+</section>
+
+<!-- DIA -->
+<section class="view" id="v-dia" hidden>
+  <article class="card" style="gap:18px">
+    <div class="dayhead">
+      <div>
+        <div class="wkname" id="wkname"></div>
+        <h2 id="ref"></h2>
+      </div>
+      <div class="nav">
+        <button class="icon" id="prev" aria-label="Dia anterior">‹</button>
+        <button class="icon" id="next" aria-label="Próximo dia">›</button>
+      </div>
+    </div>
+    <div class="step" id="s1"><span class="num">1</span><div>
+      <p><strong>Leia primeiro na sua Bíblia (NAA).</strong></p>
+      <p class="hint">Leia com calma, sublinhe o que chamar sua atenção e anote uma pergunta, se surgir.</p>
+      <button class="btn" id="li">Já li o texto</button>
+    </div></div>
+    <div class="step" id="s2"><span class="num">2</span><div>
+      <p><strong>Devocional do dia</strong></p>
+      <button class="btn pri" id="abrir">Abrir devocional</button>
+    </div></div>
+    <div class="devo" id="devo" hidden></div>
+    <div class="step" id="s3"><span class="num">3</span><div>
+      <p><strong>Meu diário</strong></p>
+      <p class="hint" id="jq"></p>
+      <textarea id="journal" placeholder="Escreva aqui…"></textarea>
+      <div class="saved" id="saved"></div>
+    </div></div>
+    <div class="step" id="s4"><span class="num">4</span><div>
+      <button class="btn" id="concluir">Concluir o dia</button>
+    </div></div>
+  </article>
+</section>
+
+<!-- PLANO -->
+<section class="view" id="v-plano" hidden>
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <div><span class="eyebrow">28 dias</span><h1 style="font-size:28px">Plano de leitura</h1></div>
+    <div class="plan" id="plan"></div>
+  </div>
+</section>
+
+<!-- MOMENTOS -->
+<section class="view" id="v-momentos" hidden>
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <div><span class="eyebrow">Uma palavra para agora</span><h1 style="font-size:28px">Estou passando por…</h1></div>
+    <div class="chips" id="momChips"></div>
+    <div class="card" id="momCard" hidden><div class="devo" id="momDevo" style="border-top:0;padding-top:0"></div></div>
+    <div class="card" id="askCard" hidden>
+      <h2 style="font-size:19px">Tire uma dúvida</h2>
+      <p class="hint">Pergunte sobre uma passagem difícil, ex.: "explica Mateus 24:36". Precisa de internet e funciona só quando o app é aberto pelo Claude.</p>
+      <div class="row"><input type="text" id="q" placeholder="Sua pergunta"><button class="btn" id="qBtn">Perguntar</button></div>
+      <div class="answer" id="ans" hidden></div>
+    </div>
+  </div>
+</section>
+
+<!-- DIÁRIO -->
+<section class="view" id="v-diario" hidden>
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <div><span class="eyebrow">O que Deus falou comigo</span><h1 style="font-size:28px">Meu diário</h1></div>
+    <div class="card" id="entries"></div>
+    <div class="card">
+      <h2 style="font-size:19px">Cópia de segurança</h2>
+      <p class="hint">Seu progresso e seu diário ficam guardados neste aparelho. Faça uma cópia para não perder nada ou para passar tudo para outro celular.</p>
+      <div class="row">
+        <button class="btn" id="exp">Salvar cópia</button>
+        <button class="btn" id="cpy">Copiar cópia</button>
+        <label class="btn" for="impFile" style="display:inline-block">Restaurar de arquivo</label>
+        <input type="file" id="impFile" accept=".json,application/json,text/plain" hidden>
+      </div>
+      <textarea id="impTxt" placeholder="Ou cole aqui o texto da cópia e toque em Restaurar texto" style="min-height:70px"></textarea>
+      <button class="btn" id="impBtn">Restaurar texto</button>
+      <div class="msg" id="bkMsg"></div>
+    </div>
+  </div>
+</section>
+
+<p class="foot">Nada substitui a oração, a igreja e a conversa com seu pastor.</p>
+</div>
+
+<div class="lock" id="lock">
+  <div class="box">
+    <div class="hero">
+      <img class="logo" src="data:image/png;base64,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" alt="" style="border-radius:16px">
+      <h1>Lâmpada para os Pés</h1>
+      <p class="verse-sub">“Lâmpada para os meus pés é a tua palavra e luz para o meu caminho.” Salmo 119:105</p>
+    </div>
+    <!-- carregando conta do Claude -->
+    <div id="lkWait" class="card" hidden><p class="hint" style="text-align:center">Abrindo sua conta…</p></div>
+    <!-- login na nuvem: usuário + PIN, vale em qualquer aparelho -->
+    <form id="lkCloud" class="card" hidden>
+      <div class="chips" role="tablist">
+        <button type="button" class="chip on" id="cTabIn">Entrar</button>
+        <button type="button" class="chip" id="cTabNew">Primeiro acesso</button>
+      </div>
+      <p class="hint" id="cHint">Entre com seu usuário e PIN. Funciona em qualquer aparelho.</p>
+      <label class="hint" for="cUser">Usuário</label>
+      <input type="text" id="cUser" maxlength="30" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ex.: renner">
+      <label class="hint" for="cPin">PIN de 6 números</label>
+      <input type="password" id="cPin" class="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password">
+      <div id="cPin2Wrap" hidden style="display:flex;flex-direction:column;gap:14px">
+        <label class="hint" for="cPin2">Repita o PIN</label>
+        <input type="password" id="cPin2" class="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password">
+      </div>
+      <div class="err" id="cErr"></div>
+      <button class="btn pri full" type="submit" id="cGo">Entrar</button>
+    </form>
+    <!-- escolher perfil -->
+    <div id="lkList" class="card" hidden>
+      <h2 style="font-size:20px">Quem está lendo?</h2>
+      <div class="plist" id="plist"></div>
+      <button class="btn full" id="novo">+ Criar novo perfil</button>
+    </div>
+    <!-- digitar PIN -->
+    <form id="lkPin" class="card" hidden>
+      <div style="display:flex;align-items:center;gap:12px"><span class="av" id="pinAv"></span><h2 style="font-size:20px" id="pinName"></h2></div>
+      <label class="hint" for="pinIn">Digite seu PIN de 4 dígitos</label>
+      <input type="text" id="pinIn" class="pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off">
+      <div class="err" id="pinErr"></div>
+      <button class="btn pri full" type="submit">Entrar</button>
+      <button class="link" type="button" id="pinBack">Voltar</button>
+    </form>
+    <!-- criar perfil -->
+    <form id="lkNew" class="card" hidden>
+      <h2 style="font-size:20px">Novo perfil</h2>
+      <p class="hint">Cada pessoa tem o próprio progresso e o próprio diário. Só entra quem souber o PIN.</p>
+      <label class="hint" for="nNome">Seu nome</label>
+      <input type="text" id="nNome" maxlength="30" autocomplete="off">
+      <label class="hint" for="nPin">Crie um PIN de 4 dígitos</label>
+      <input type="text" id="nPin" class="pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off">
+      <label class="hint" for="nPin2">Repita o PIN</label>
+      <input type="text" id="nPin2" class="pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off">
+      <div class="err" id="nErr"></div>
+      <button class="btn pri full" type="submit">Criar e entrar</button>
+      <button class="link" type="button" id="nBack">Voltar</button>
+    </form>
+    <p class="hint" style="text-align:center" id="lkFoot">Guarde seu PIN: sem ele não é possível abrir o perfil. Faça cópias de segurança na aba Diário.</p>
+  </div>
+</div>
+
+<nav class="tabs"aria-label="Navegação"><div class="in">
+  <button class="tab" data-v="inicio"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/></svg>Início</button>
+  <button class="tab" data-v="dia"><svg viewBox="0 0 24 24"><path d="M12 3c2.5 3.7 5 5.9 5 9.5a5 5 0 0 1-10 0C7 8.9 9.5 6.7 12 3z"/><path d="M8 21h8"/></svg>Hoje</button>
+  <button class="tab" data-v="plano"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg>Plano</button>
+  <button class="tab" data-v="momentos"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/></svg>Momentos</button>
+  <button class="tab" data-v="diario"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg>Diário</button>
+</div></nav>
+
+<script>
+const DEVOS={
+1:{titulo:"A Palavra que se fez gente",leitura:"João 1:1-18",
+contexto:"João escreve para igrejas do fim do primeiro século, quando muitos discutiam quem Jesus realmente era. Ele começa antes do tempo, na eternidade, para mostrar que Jesus não é apenas um mestre: é o próprio Deus que veio morar entre nós.",
+reflexao:["Antes de falar sobre a volta de Jesus, precisamos conhecer quem é Aquele que vai voltar. João diz que Ele é o Verbo, a Palavra eterna, por meio de quem tudo foi criado. E esse Deus infinito escolheu se tornar gente, armar sua tenda no meio da humanidade, cheio de graça e de verdade.","Isso muda a forma como olhamos para a volta de Cristo. Quem vem não é um desconhecido distante, mas o mesmo que já se aproximou de nós com graça. O versículo 12 mostra o convite: todos os que O recebem e creem no seu nome ganham o direito de ser filhos de Deus. A volta de Jesus é a volta do Pai que vem buscar os filhos."],
+aplicacao:"Leia João 1:12 e diga em voz alta, em oração, que você recebe Jesus. Depois anote no diário uma palavra que descreva quem Jesus é para você hoje.",
+oracao:"Senhor Jesus, Tu és a Palavra eterna e mesmo assim vieste morar entre nós. Obrigado por te aproximares de mim com graça e verdade. Eu te recebo hoje. Ilumina as áreas escuras do meu coração e ensina-me a conhecer-te de verdade. Amém.",
+pergunta:"O que muda no meu medo quando lembro que Aquele que vai voltar é o mesmo que veio cheio de graça?",
+memorizar:"João 1:14",memorizarNota:"Deus se fez gente e habitou entre nós, cheio de graça e de verdade."},
+
+2:{titulo:"Nascer de novo",leitura:"João 3:1-21",
+contexto:"Nicodemos era fariseu e líder dos judeus, um homem religioso e respeitado. Ele procura Jesus de noite, talvez com receio dos outros, e ouve algo que nenhuma religião podia lhe dar: é preciso nascer de novo.",
+reflexao:["Nicodemos tinha conhecimento, disciplina e reputação, mas Jesus mostra que nada disso basta. Entrar no Reino não é questão de melhorar a vida antiga, e sim de receber uma vida nova, que vem do Espírito. É Deus quem faz isso em nós, assim como ninguém escolhe o próprio nascimento.","Os versículos 16 a 18 são o centro da conversa. Deus amou o mundo de tal forma que deu o seu Filho, e Ele não veio para condenar, mas para salvar. Quem crê não é condenado. Para quem tem medo do juízo final, essa é a melhor notícia: em Cristo, a condenação já foi tratada na cruz."],
+aplicacao:"Se você nunca entregou sua vida a Jesus de forma consciente, faça isso hoje em oração, com suas palavras. Se já entregou, agradeça a Deus pelo novo nascimento e conte para alguém de confiança.",
+oracao:"Pai, obrigado por me amares a ponto de dar o teu Filho. Eu não quero apenas uma religião, eu quero vida nova. Faz nascer em mim o que só o teu Espírito pode fazer. Eu creio em Jesus e descanso no fato de que Ele não veio me condenar, mas me salvar. Amém.",
+pergunta:"Em que eu tenho confiado para estar bem com Deus: no meu esforço ou no que Jesus fez?",
+memorizar:"João 3:16",memorizarNota:"O amor de Deus é a razão da salvação, e quem crê em Jesus recebe a vida eterna."},
+
+3:{titulo:"A voz do Bom Pastor",leitura:"João 10:7-18 e 27-30",
+contexto:"Jesus fala a um povo acostumado com pastores e ovelhas. Pouco antes, líderes religiosos tinham expulsado da sinagoga um homem que Ele curou. Jesus se apresenta como o pastor que cuida, ao contrário dos que só exploram o rebanho.",
+reflexao:["O bom pastor conhece cada ovelha pelo nome e dá a vida por elas. Jesus não fala de um cuidado genérico, mas pessoal. Ele sabe quem você é, conhece seus medos e mesmo assim decidiu dar a vida por você, por vontade própria (v. 18).","Nos versículos 27 a 29, Jesus faz uma promessa forte: ninguém arrancará as ovelhas da sua mão, nem da mão do Pai. A segurança de quem pertence a Cristo não depende da força com que nós seguramos nEle, mas da força com que Ele nos segura. É por isso que a volta do Pastor não precisa ser motivo de pavor."],
+aplicacao:"Reserve 5 minutos em silêncio hoje. Peça a Deus para ouvir a voz do Pastor por meio da Palavra e anote qualquer direção ou consolo que vier ao seu coração.",
+oracao:"Senhor Jesus, Bom Pastor, obrigado por me conheceres pelo nome e por teres dado a vida por mim. Ensina-me a reconhecer a tua voz no meio de tantas vozes. Eu descanso na tua mão, que ninguém pode vencer. Amém.",
+pergunta:"Quais vozes têm falado mais alto na minha vida do que a voz do Pastor?",
+memorizar:"João 10:28",memorizarNota:"Jesus dá vida eterna às suas ovelhas, e ninguém pode arrancá-las da sua mão."},
+
+4:{titulo:"Eu sou a ressurreição e a vida",leitura:"João 11:17-44",
+contexto:"Lázaro, amigo de Jesus, morreu em Betânia. Quando Jesus chega, ele já está no túmulo há quatro dias. Marta e Maria estão de luto e decepcionadas, porque Jesus demorou. Esse é o último grande sinal antes da cruz no Evangelho de João.",
+reflexao:["Marta crê na ressurreição do último dia, como uma doutrina distante. Jesus responde trazendo a esperança para perto: Ele mesmo é a ressurreição e a vida. A esperança cristã sobre o futuro não é um conceito, é uma Pessoa. Quem está ligado a Jesus está ligado à vida que vence a morte.","Antes de ressuscitar Lázaro, Jesus chora (v. 35). Ele sabia o que ia fazer e mesmo assim se comoveu com a dor dos amigos. A volta de Jesus vai acabar com a morte para sempre, mas, enquanto ela não chega, Ele não é indiferente às nossas lágrimas. Ele chora conosco e depois chama para fora do túmulo."],
+aplicacao:"Pense numa área da sua vida que parece morta, sem esperança. Escreva o nome dela no diário e entregue a Jesus, dizendo: Tu és a ressurreição e a vida também aqui.",
+oracao:"Senhor Jesus, Tu és a ressurreição e a vida. Obrigado porque choras comigo e não me deixas sozinho na dor. Fortalece minha fé para crer que a morte não tem a última palavra. Eu espero o dia em que Tu chamarás os teus para a vida. Amém.",
+pergunta:"Jesus pergunta a Marta: você crê nisso? Como eu respondo essa pergunta hoje, com sinceridade?",
+memorizar:"João 11:25",memorizarNota:"Jesus é a ressurreição e a vida: quem crê nEle viverá, mesmo que morra."},
+
+5:{titulo:"Um lugar preparado para você",leitura:"João 14:1-6",
+contexto:"É a última noite de Jesus com os discípulos antes da cruz. Eles estão assustados, porque Ele acabou de dizer que vai partir. João registra essas palavras décadas depois, para igrejas que também aguardavam a volta do Senhor.",
+reflexao:["Jesus fala da sua volta como um consolo, e não como uma ameaça. Ele se compara a alguém que vai na frente preparar a casa e depois retorna para buscar quem ama. A primeira coisa que Ele diz é para o coração não se perturbar. Para quem está nEle, a volta é um reencontro (Tito 2:13).","O medo costuma surgir quando pensamos que precisamos estar \"bons o suficiente\". O versículo 6 responde: Jesus é o caminho, e nós não precisamos construí-lo. A segurança não está no nosso desempenho, mas em quem Ele é. O amor perfeito lança fora o medo (1 João 4:18)."],
+aplicacao:"Escreva num papel o que exatamente te dá medo sobre a volta de Jesus. Depois, leia João 14:1-3 em voz alta e entregue esse medo a Ele em oração.",
+oracao:"Senhor Jesus, meu coração tem estado perturbado. Eu quero crer em Ti de verdade. Entrego minha vida a Ti, com meus medos e falhas. Obrigado por preparar um lugar para mim. Ensina-me a esperar a Tua volta com alegria, e não com medo. Amém.",
+pergunta:"Eu vejo Jesus mais como um Juiz que vem me pegar desprevenido ou como um Amigo que vem me buscar? Por quê?",
+memorizar:"João 14:1",memorizarNota:"Jesus pede que o coração não se perturbe: crer em Deus é também crer nEle."},
+
+6:{titulo:"Jesus orou por você",leitura:"João 17:20-26",
+contexto:"Ainda na última noite, Jesus ora ao Pai. Primeiro por si mesmo, depois pelos discípulos e, nestes versículos, por todos os que iriam crer por meio da mensagem deles. Ou seja: por nós.",
+reflexao:["Antes de ir para a cruz, Jesus pensou em você. No versículo 20, Ele ora pelos que ainda iriam crer. Isso significa que a sua fé hoje é resposta a uma oração do próprio Filho de Deus. Você não está seguindo Jesus por acaso.","No versículo 24, Jesus revela o seu desejo: que os seus estejam com Ele, onde Ele está, para ver a sua glória. A volta de Cristo é o cumprimento dessa oração. Ele não volta a contragosto, Ele volta porque deseja estar com quem ama. Saber que Jesus quer a nossa companhia muda o medo em expectativa."],
+aplicacao:"Leia João 17:24 três vezes, devagar, colocando seu nome no lugar de \"os que me deste\". Depois agradeça a Jesus por ter orado por você.",
+oracao:"Senhor Jesus, obrigado por teres orado por mim antes mesmo de eu existir. Que alegria saber que Tu desejas que eu esteja contigo. Une-me aos meus irmãos, guarda-me do mal e prepara meu coração para ver a tua glória. Amém.",
+pergunta:"Como seria esperar a volta de Jesus sabendo que Ele deseja estar comigo?",
+memorizar:"João 17:24",memorizarNota:"Jesus deseja que os seus estejam com Ele e vejam a sua glória."},
+
+7:{titulo:"Paz seja com vocês",leitura:"João 20:19-31",
+contexto:"É o domingo da ressurreição. Os discípulos estão trancados numa sala, com medo das autoridades. Jesus aparece no meio deles. Tomé não estava presente e diz que só vai crer se vir as marcas dos cravos.",
+reflexao:["A primeira palavra do Ressuscitado para discípulos medrosos, que o tinham abandonado, não foi uma bronca, foi paz. Ele mostra as mãos e o lado: as marcas do amor que pagou pelos pecados. O mesmo Jesus que voltará em glória carrega essas marcas, e elas são a nossa garantia.","Tomé tinha dúvidas, e Jesus não o rejeitou: foi ao encontro dele com paciência. Dúvidas sinceras podem ser levadas a Jesus. O versículo 31 explica por que João escreveu tudo isso: para que você creia que Jesus é o Cristo e, crendo, tenha vida no nome dEle. Hoje termina a primeira semana conhecendo quem vai voltar."],
+aplicacao:"Se você tem alguma dúvida sobre a fé, escreva-a com honestidade no diário e leve-a a Deus em oração. Se puder, converse sobre ela com seu pastor ou um irmão maduro nesta semana.",
+oracao:"Senhor Jesus ressuscitado, entra nos lugares trancados do meu coração e diz: paz. Obrigado pelas marcas do teu amor. Recebe minhas dúvidas e fortalece minha fé, para que eu possa dizer como Tomé: Senhor meu e Deus meu. Amém.",
+pergunta:"O que esta primeira semana me mostrou sobre quem Jesus é?",
+memorizar:"João 20:31",memorizarNota:"A Bíblia foi escrita para que creiamos em Jesus e tenhamos vida no nome dEle."},
+
+8:{titulo:"Esperar o Filho que vem dos céus",leitura:"1 Tessalonicenses 1:2-10",
+contexto:"Paulo fundou a igreja de Tessalônica, mas precisou fugir da cidade por causa de perseguição. Pouco tempo depois, escreve aos novos cristãos para encorajá-los. É uma das primeiras cartas do Novo Testamento.",
+reflexao:["Paulo elogia três marcas daquela igreja: fé que trabalha, amor que se esforça e esperança que persevera. A esperança deles tinha um alvo claro: Jesus. Eles tinham deixado os ídolos para servir a Deus e esperar dos céus o seu Filho.","Repare como Paulo descreve Jesus no versículo 10: Ele nos livra da ira vindoura. Para o cristão, a volta de Jesus não é a chegada da ira, mas a chegada de quem nos livra dela. Esperar Jesus não é ficar parado com medo; é servir a Deus com alegria enquanto aguardamos."],
+aplicacao:"Pense em algo que tem ocupado o lugar de Deus na sua vida (um \"ídolo\" moderno, como aprovação, dinheiro ou controle). Escreva no diário e peça ajuda a Deus para deixá-lo.",
+oracao:"Pai, obrigado porque Jesus me livra da ira que viria. Faz crescer em mim uma fé que age, um amor que se esforça e uma esperança que não desiste. Afasta de mim os ídolos e ensina-me a servir-te enquanto espero o teu Filho. Amém.",
+pergunta:"Se alguém observasse minha vida, perceberia que estou esperando Jesus? Em quê?",
+memorizar:"1 Tessalonicenses 1:10",memorizarNota:"Esperamos dos céus o Filho, Jesus, que nos livra da ira vindoura."},
+
+9:{titulo:"Consolem uns aos outros",leitura:"1 Tessalonicenses 4:13-18",
+contexto:"Alguns cristãos de Tessalônica tinham morrido, e os que ficaram estavam angustiados: será que esses irmãos perderiam a volta de Jesus? Paulo escreve para responder a essa dúvida e acalmar a igreja.",
+reflexao:["Paulo não diz que os cristãos não sentem tristeza, mas que não se entristecem como quem não tem esperança. Assim como Jesus morreu e ressuscitou, os que morreram nEle também ressuscitarão. Quando o Senhor descer do céu, os mortos em Cristo ressuscitam primeiro, e os que estiverem vivos serão reunidos com eles para encontrar o Senhor.","Evangélicos têm entendimentos diferentes sobre o momento exato desse encontro em relação à grande tribulação. Mas todos concordam no ponto central de Paulo: estaremos para sempre com o Senhor. E repare no objetivo do texto (v. 18): ele foi escrito para consolar. Se a volta de Jesus tem produzido pavor em você, este texto quer produzir o contrário."],
+aplicacao:"Pense em alguém que perdeu uma pessoa querida que conhecia a Jesus. Envie hoje uma mensagem de consolo para essa pessoa, citando 1 Tessalonicenses 4:17.",
+oracao:"Senhor, obrigado porque a morte não separa para sempre os que estão em Ti. Consola meu coração quando penso na minha morte e na de quem eu amo. Que a certeza de estar para sempre contigo me encha de paz. Usa-me para consolar outras pessoas. Amém.",
+pergunta:"Qual parte deste texto mais acalma meu coração? Por quê?",
+memorizar:"1 Tessalonicenses 4:17",memorizarNota:"Os que são de Cristo serão reunidos com Ele e estarão para sempre com o Senhor."},
+
+10:{titulo:"Filhos da luz",leitura:"1 Tessalonicenses 5:1-11",
+contexto:"Depois de falar sobre o encontro com o Senhor, Paulo trata da pergunta \"quando?\". Ele usa a imagem do ladrão que chega de noite, que o próprio Jesus tinha usado.",
+reflexao:["O Dia do Senhor virá de surpresa para quem vive despreocupado, como um ladrão na noite. Mas Paulo faz uma virada importante no versículo 4: vocês não estão nas trevas para que esse dia os surpreenda como ladrão. Quem é de Cristo é filho da luz. A surpresa da data não precisa ser uma surpresa de condenação.","O versículo 9 é um dos mais consoladores sobre o fim: Deus não nos destinou para a ira, mas para alcançar a salvação por meio de Jesus, que morreu por nós. A resposta certa não é ansiedade, mas sobriedade: viver acordado, vestido de fé, amor e esperança, encorajando uns aos outros."],
+aplicacao:"Escolha uma atitude de \"filho da luz\" para praticar hoje: pedir perdão, falar a verdade numa situação difícil ou encorajar alguém. Anote qual foi à noite.",
+oracao:"Pai, obrigado porque não me destinaste para a ira, mas para a salvação em Jesus. Tira de mim o medo e a sonolência espiritual. Veste-me de fé, amor e esperança, e ajuda-me a viver como filho da luz. Amém.",
+pergunta:"Eu tenho vivido mais com ansiedade sobre o fim ou com sobriedade e esperança?",
+memorizar:"1 Tessalonicenses 5:9",memorizarNota:"Deus não nos destinou para a ira, mas para a salvação por meio de Jesus."},
+
+11:{titulo:"Firmes enquanto esperamos",leitura:"2 Tessalonicenses 2:1-3 e 13-17; 3:3-5",
+contexto:"Alguém tinha espalhado na igreja que o Dia do Senhor já tinha chegado, talvez até com uma carta falsa em nome de Paulo. Os irmãos ficaram abalados. Além disso, alguns tinham parado de trabalhar, achando que o fim estava próximo.",
+reflexao:["Paulo começa pedindo que não se deixem abalar nem assustar facilmente com boatos sobre o fim. Isso vale muito hoje, com vídeos e mensagens alarmistas circulando o tempo todo. Ele lembra que certos acontecimentos ainda viriam antes, e que o cristão não precisa viver em pânico com cada notícia.","Em vez de medo, Paulo aponta para a fidelidade de Deus: Ele escolheu vocês para a salvação, Ele é fiel, Ele vai fortalecer e guardar vocês do Maligno (3:3). E no capítulo 3 ele corrige quem parou de trabalhar: esperar Jesus significa continuar fazendo o bem e cuidando das responsabilidades do dia a dia."],
+aplicacao:"Hoje, evite consumir conteúdos alarmistas sobre o fim do mundo. Se algo te assustar, leve primeiro à Bíblia e ao seu pastor antes de acreditar.",
+oracao:"Senhor, guarda meu coração dos boatos e do medo. Obrigado porque és fiel e me escolheste para a salvação. Fortalece-me e guarda-me do Maligno. Ajuda-me a continuar firme, trabalhando e fazendo o bem enquanto espero por Ti. Amém.",
+pergunta:"Que fontes têm alimentado meu medo da volta de Jesus? O que preciso mudar nisso?",
+memorizar:"2 Tessalonicenses 3:3",memorizarNota:"O Senhor é fiel: Ele fortalece e guarda os seus do Maligno."},
+
+12:{titulo:"A morte foi tragada pela vitória",leitura:"1 Coríntios 15:50-58",
+contexto:"Na igreja de Corinto, alguns duvidavam da ressurreição dos mortos. Paulo dedica um capítulo inteiro ao tema, mostrando que tudo na fé depende da ressurreição de Jesus e da nossa futura ressurreição.",
+reflexao:["Paulo revela um mistério: num instante, num abrir e fechar de olhos, ao som da última trombeta, os mortos ressuscitarão e nós seremos transformados. O corpo frágil, que adoece e envelhece, será revestido de imortalidade. A volta de Jesus não é o fim da vida, é o começo da vida plena.","Paulo quase provoca a morte: onde está a tua vitória? Onde está o teu aguilhão? O aguilhão da morte é o pecado, e Jesus já tratou disso. Por isso a conclusão do capítulo é prática (v. 58): sejam firmes e dediquem-se à obra do Senhor, porque nada do que é feito para Ele é em vão."],
+aplicacao:"Faça hoje uma coisa pequena para o Senhor que ninguém vai ver (uma oração por alguém, uma ajuda, uma oferta). Lembre-se de que não é em vão.",
+oracao:"Deus, graças te dou porque me dás a vitória por meio de Jesus Cristo. A morte não tem a última palavra. Torna-me firme e constante, e mostra-me que nada do que faço para Ti é em vão. Amém.",
+pergunta:"O que eu faria de diferente se acreditasse de verdade que nada do que faço para o Senhor é em vão?",
+memorizar:"1 Coríntios 15:58",memorizarNota:"Firmes na obra do Senhor, sabendo que o trabalho feito para Ele não é em vão."},
+
+13:{titulo:"Nossa cidadania está nos céus",leitura:"Filipenses 3:7-14 e 20-21",
+contexto:"Paulo escreve da prisão para a igreja de Filipos, uma colônia romana cujos moradores se orgulhavam de ser cidadãos de Roma. Ele usa essa imagem para falar da identidade do cristão.",
+reflexao:["Paulo tinha muitos motivos para se orgulhar, mas considera tudo perda comparado a conhecer Cristo. Ele não diz que já chegou lá; diz que prossegue para o alvo. A vida cristã é uma corrida, e o prêmio é o próprio Jesus.","Nos versículos 20 e 21, ele lembra que a nossa pátria está nos céus, de onde aguardamos o Salvador. Assim como os filipenses esperavam a visita do imperador, nós aguardamos Jesus, que vai transformar nosso corpo frágil para ser semelhante ao dEle. Quem tem a cidadania garantida não vive com medo do Rei, vive com saudade dEle."],
+aplicacao:"Liste no diário duas coisas de que você tem se orgulhado ou em que tem colocado segurança. Ore entregando-as e dizendo que Cristo vale mais.",
+oracao:"Senhor Jesus, eu quero conhecer-te mais do que qualquer conquista. Esquecendo o que ficou para trás, ajuda-me a prosseguir para o alvo. Obrigado porque minha pátria está nos céus. Eu aguardo a tua vinda, meu Salvador. Amém.",
+pergunta:"O que tenho tratado como \"ganho\" que, diante de Cristo, eu deveria considerar perda?",
+memorizar:"Filipenses 3:20",memorizarNota:"Nossa pátria está nos céus, de onde aguardamos o Salvador, Jesus."},
+
+14:{titulo:"O amor lança fora o medo",leitura:"1 João 3:1-3 e 4:16-18",
+contexto:"João, já idoso, escreve para igrejas confundidas por falsos mestres. Ele quer que os cristãos tenham segurança de que possuem a vida eterna e que vivam em amor.",
+reflexao:["João começa maravilhado: vejam que grande amor o Pai nos deu, a ponto de sermos chamados filhos de Deus, e de fato somos. Ainda não sabemos tudo sobre como seremos, mas sabemos que, quando Ele se manifestar, seremos semelhantes a Ele. A volta de Jesus completa a nossa transformação.","No capítulo 4, João toca exatamente no seu medo. Ele diz que podemos ter confiança no dia do juízo, porque no amor não existe medo: o amor perfeito lança fora o medo, pois o medo tem a ver com castigo. Quanto mais você conhece o amor de Deus, menos espaço o pavor tem. Essa é a conclusão da segunda semana: a esperança da Igreja é segura."],
+aplicacao:"Escreva no diário: \"Eu sou filho(a) de Deus\". Embaixo, liste três provas do amor dEle na sua vida. Volte a essa lista quando o medo aparecer.",
+oracao:"Pai, que grande amor me deste ao me chamar de filho. Enche meu coração do teu amor até que não sobre lugar para o medo do castigo. Purifica-me enquanto espero a manifestação de Jesus. Amém.",
+pergunta:"Meu medo da volta de Jesus tem mais a ver com castigo ou com não conhecer bem o amor de Deus?",
+memorizar:"1 João 4:18",memorizarNota:"No amor não há medo: o amor perfeito lança fora o medo."},
+
+15:{titulo:"Não se assustem",leitura:"Mateus 24:3-14",
+contexto:"Jesus está no monte das Oliveiras e acabou de anunciar a destruição do templo de Jerusalém, que aconteceu no ano 70. Os discípulos perguntam quando isso será e qual o sinal da sua vinda. Evangélicos entendem de formas diferentes quais partes falam de 70 d.C. e quais falam do fim.",
+reflexao:["A primeira coisa que Jesus diz não é uma data, é um alerta: cuidado para que ninguém engane vocês. Muitos virão em nome dEle, haverá guerras, fomes e terremotos. E no versículo 6 Ele diz com clareza: não se assustem. Essas coisas precisam acontecer, mas ainda não é o fim.","Jesus descreve esses acontecimentos como o início das dores, como as de um parto. Dor de parto é real, mas aponta para uma vida nova. O chamado é perseverar até o fim (v. 13) e continuar anunciando o evangelho a todas as nações (v. 14). O foco não é decifrar cada notícia, mas permanecer fiel."],
+aplicacao:"Da próxima vez que uma notícia ruim te deixar com medo do fim, pare e repita: \"Jesus disse: não se assustem\". Ore pela situação em vez de alimentar o pânico.",
+oracao:"Senhor Jesus, este mundo está cheio de guerras e dores, e às vezes isso me assusta. Obrigado porque já sabias de tudo e me disseste para não temer. Guarda-me dos enganadores e dá-me perseverança até o fim. Amém.",
+pergunta:"Como as notícias do mundo têm afetado minha fé? O que Jesus me diz sobre elas neste texto?",
+memorizar:"Mateus 24:13",memorizarNota:"Aquele que perseverar até o fim será salvo."},
+
+16:{titulo:"Ninguém sabe o dia",leitura:"Mateus 24:36-46",
+contexto:"Continuando o sermão no monte das Oliveiras, Jesus passa dos sinais para a atitude correta de quem espera. Ele compara sua vinda aos dias de Noé e a um patrão que volta de viagem.",
+reflexao:["Jesus afirma que ninguém sabe o dia nem a hora, nem os anjos. Isso nos livra de uma armadilha: quem marca datas está indo além do que o próprio Jesus revelou. O nosso trabalho não é calcular, é estar preparado.","Nos dias de Noé, as pessoas viviam normalmente, comendo e casando, sem perceber nada. O problema não era comer ou casar, mas viver como se Deus não existisse. Jesus termina falando de um servo fiel que o patrão encontra fazendo o que devia (v. 46). Estar preparado não é viver em tensão, é viver fiel no dia a dia."],
+aplicacao:"Pergunte-se: se Jesus voltasse hoje, o que Ele me encontraria fazendo? Escolha uma responsabilidade que você tem deixado de lado e cumpra-a hoje.",
+oracao:"Senhor, eu não sei o dia nem a hora, e descanso nisso. Livra-me da curiosidade ansiosa e da indiferença. Faz de mim um servo fiel, que Tu encontres fazendo o bem quando voltares. Amém.",
+pergunta:"Estar preparado para mim tem significado viver com medo ou viver com fidelidade?",
+memorizar:"Mateus 24:42",memorizarNota:"Vigiem, porque vocês não sabem em que dia vem o seu Senhor."},
+
+17:{titulo:"Azeite na lâmpada",leitura:"Mateus 25:1-13",
+contexto:"Nos casamentos daquela época, o noivo ia buscar a noiva, muitas vezes à noite, e as moças acompanhavam o cortejo com lâmpadas a óleo. Jesus usa esse costume para falar da sua volta.",
+reflexao:["As dez moças esperavam o mesmo noivo e todas cochilaram. A diferença não estava em ficar acordada, mas em ter azeite. As prudentes tinham se preparado para uma espera mais longa. As imprudentes tinham só o necessário para o começo. E azeite não se empresta: cada um precisa ter a sua própria relação com Deus.","Repare que a festa é o centro da história: é um casamento, uma celebração. A volta de Jesus é a chegada do Noivo, não de um carrasco. O texto nos chama a manter a lâmpada acesa, como o nome deste app lembra (Salmo 119:105): alimentar a fé com a Palavra, a oração e a vida com a igreja, dia após dia."],
+aplicacao:"Avalie o \"azeite\" da sua vida: como estão sua oração, sua leitura bíblica e sua comunhão com a igreja? Escolha uma delas para fortalecer nesta semana e marque um horário.",
+oracao:"Senhor Jesus, meu Noivo, eu quero estar pronto quando chegares. Enche minha lâmpada com o teu Espírito e com a tua Palavra. Não quero uma fé emprestada, quero conhecer-te de verdade. Mantém a minha luz acesa até o dia da festa. Amém.",
+pergunta:"Minha fé tem azeite para uma espera longa ou só para o começo? O que alimenta minha lâmpada?",
+memorizar:"Mateus 25:13",memorizarNota:"Vigiem, porque vocês não sabem o dia nem a hora."},
+
+18:{titulo:"Fiel no pouco",leitura:"Mateus 25:14-30",
+contexto:"Ainda falando da sua volta, Jesus conta a parábola de um homem que viaja e confia seus bens aos servos. Um talento era uma quantia enorme, o salário de muitos anos.",
+reflexao:["Dois servos trabalharam com o que receberam e ouviram do senhor: muito bem, servo bom e fiel. O terceiro enterrou o talento. O motivo está no versículo 25: ele teve medo. Ele via o senhor como alguém duro e, por isso, ficou paralisado. Ver Deus de forma distorcida produz uma vida parada.","Jesus nos ensina que esperar sua volta é usar o que Ele nos deu: dons, tempo, recursos, oportunidades. Logo depois (v. 31-40), Ele diz que o que fazemos aos pequeninos fazemos a Ele. A espera fiel tem cara de serviço, generosidade e cuidado com o próximo."],
+aplicacao:"Identifique um dom ou recurso que você tem \"enterrado\" por medo. Dê hoje um primeiro passo para usá-lo (servir na igreja, ajudar alguém, começar algo).",
+oracao:"Senhor, livra-me do medo que paralisa e de uma visão errada de quem Tu és. Obrigado pelos dons que me confiaste. Ensina-me a usá-los para a tua glória e para o bem dos outros, para que eu ouça um dia: muito bem, servo bom e fiel. Amém.",
+pergunta:"O que eu tenho enterrado por medo? Que visão de Deus está por trás desse medo?",
+memorizar:"Mateus 25:21",memorizarNota:"Quem é fiel no pouco recebe mais e entra na alegria do seu Senhor."},
+
+19:{titulo:"O Senhor que serve",leitura:"Lucas 12:35-48",
+contexto:"Jesus está ensinando os discípulos e a multidão. Pouco antes, falou sobre não viver ansioso por comida e roupa. Agora Ele fala sobre estar pronto, com roupas de trabalho e lâmpadas acesas.",
+reflexao:["O versículo 37 tem uma das imagens mais surpreendentes da Bíblia: quando o senhor chega e encontra os servos vigiando, ele mesmo se veste para servir, faz com que se sentem à mesa e os serve. O Senhor que volta não vem para humilhar quem O espera, mas para honrar e cuidar.","Pedro pergunta se a parábola é só para os discípulos, e Jesus responde falando do administrador fiel, que cuida dos outros servos. A quem muito foi dado, muito será pedido. Conhecer a Palavra, como você tem feito neste plano, é um privilégio e também uma responsabilidade de viver o que se aprende."],
+aplicacao:"Sirva alguém hoje de uma forma prática e silenciosa, lembrando que Jesus se dispôs a servir você.",
+oracao:"Senhor Jesus, que maravilha saber que Tu, o Rei, te dispões a servir os teus. Mantém-me pronto, com a lâmpada acesa. Ajuda-me a cuidar das pessoas que puseste perto de mim e a viver o que tenho aprendido. Amém.",
+pergunta:"O que muda em mim ao imaginar Jesus me servindo à mesa quando voltar?",
+memorizar:"Lucas 12:40",memorizarNota:"Estejam preparados, porque o Filho do Homem virá na hora em que não se espera."},
+
+20:{titulo:"Assim Ele voltará",leitura:"Atos 1:1-11",
+contexto:"Lucas abre o livro de Atos contando os 40 dias de Jesus ressuscitado com os discípulos. Antes de subir aos céus, Ele promete o Espírito Santo e dá a missão de serem testemunhas até os confins da terra.",
+reflexao:["Os discípulos perguntam se o Reino seria restaurado naquele momento. Jesus responde que não cabe a eles saber tempos e datas, mas que receberiam poder do Espírito para serem testemunhas. De novo, a resposta para a curiosidade sobre o fim é missão.","Enquanto eles olham para o céu, dois homens de branco dizem: esse mesmo Jesus voltará do mesmo modo como o viram subir. É uma promessa clara e pessoal. Não é outro Jesus, é o mesmo que caminhou com eles, os perdoou e os amou. E repare: os anjos tiram os discípulos de ficar parados olhando para cima e os mandam de volta para a vida e para a missão."],
+aplicacao:"Pense em uma pessoa com quem você pode compartilhar algo do que aprendeu neste plano. Envie uma mensagem ou converse com ela esta semana.",
+oracao:"Senhor Jesus, obrigado pela promessa de que voltarás, o mesmo Jesus que subiu aos céus. Enche-me do teu Espírito e faz de mim uma testemunha onde eu estiver. Tira-me da curiosidade parada e coloca-me na tua missão. Amém.",
+pergunta:"Tenho gasto mais energia tentando entender o \"quando\" ou vivendo a missão que Jesus me deu?",
+memorizar:"Atos 1:11",memorizarNota:"O mesmo Jesus que subiu aos céus voltará da mesma forma."},
+
+21:{titulo:"A paciência de Deus é salvação",leitura:"2 Pedro 3:8-14",
+contexto:"Pedro escreve perto do fim da vida. Algumas pessoas zombavam dos cristãos dizendo: cadê a promessa da vinda dEle? Tudo continua igual. Pedro responde explicando a aparente demora.",
+reflexao:["Para o Senhor, um dia é como mil anos e mil anos como um dia. Deus não está atrasado. O versículo 9 revela o coração dEle: Ele é paciente, não querendo que ninguém se perca, mas que todos cheguem ao arrependimento. A demora é misericórdia, é tempo para mais pessoas se voltarem para Ele, talvez gente que você ama.","Pedro descreve o fim com imagens fortes, mas termina com esperança: aguardamos novos céus e nova terra, onde habita a justiça. E a pergunta que ele faz é prática: que tipo de pessoas vocês devem ser? A resposta é viver em santidade e paz, esperando com expectativa. Assim termina a terceira semana, sobre o que Jesus ensinou da sua volta."],
+aplicacao:"Ore hoje pelo nome de três pessoas que ainda não conhecem Jesus, agradecendo pela paciência de Deus com elas e com você.",
+oracao:"Pai, obrigado pela tua paciência comigo e com tantas pessoas. Tu não estás atrasado, estás sendo misericordioso. Usa este tempo na minha vida para me santificar e para alcançar outros. Eu aguardo os novos céus e a nova terra. Amém.",
+pergunta:"Como a ideia de que a \"demora\" de Jesus é misericórdia muda minha forma de esperar?",
+memorizar:"2 Pedro 3:9",memorizarNota:"Deus é paciente, porque não quer que ninguém se perca, mas que todos se arrependam."},
+
+22:{titulo:"Não tenha medo, Eu sou o primeiro e o último",leitura:"Apocalipse 1:9-18",
+contexto:"João está exilado na ilha de Patmos por causa da fé. Num domingo, ele tem uma visão de Jesus glorificado. Apocalipse foi escrito para igrejas perseguidas, para fortalecê-las, e é cheio de imagens simbólicas.",
+reflexao:["Apocalipse significa revelação, e o livro é, antes de tudo, a revelação de Jesus Cristo (1:1). João O vê com olhos como fogo e rosto brilhante como o sol. A visão é tão forte que ele cai como morto. Diante da glória de Jesus, é natural sentir-se pequeno.","Mas veja o que Jesus faz no versículo 17: põe a mão direita sobre João e diz para não ter medo. Ele é o primeiro e o último, o que vive, que esteve morto e agora vive para sempre, e tem as chaves da morte. O Jesus glorioso do Apocalipse é o mesmo que toca com carinho quem está com medo. Comece a última semana com essa imagem."],
+aplicacao:"Quando ler partes difíceis do Apocalipse nesta semana, lembre-se de Apocalipse 1:17. Escreva este versículo num papel e deixe-o dentro da sua Bíblia.",
+oracao:"Senhor Jesus glorioso, diante de Ti eu me sinto pequeno. Obrigado porque colocas a mão sobre mim e dizes: não tenha medo. Tu tens as chaves da morte e estás vivo para sempre. Eu descanso em Ti. Amém.",
+pergunta:"Como me sinto ao imaginar Jesus pondo a mão sobre mim e dizendo: não tenha medo?",
+memorizar:"Apocalipse 1:18",memorizarNota:"Jesus esteve morto, mas vive para sempre e tem as chaves da morte."},
+
+23:{titulo:"Digno é o Cordeiro",leitura:"Apocalipse 5:1-14",
+contexto:"João vê o trono de Deus no céu (capítulo 4) e, na mão de quem está assentado, um livro selado que representa os planos de Deus para a história. Ninguém é digno de abri-lo, e João chora.",
+reflexao:["Um ancião diz a João que pare de chorar, porque o Leão da tribo de Judá venceu. João se vira para ver um leão e vê um Cordeiro, como que morto, mas de pé. Esse é o jeito de Deus vencer: pelo sacrifício. Quem conduz a história até o fim é Jesus, o Cordeiro que deu a vida.","Então todo o céu canta: Ele foi morto e, com o seu sangue, comprou para Deus pessoas de toda tribo, língua, povo e nação. O futuro do mundo não está nas mãos do caos nem dos poderosos, mas nas mãos do Cordeiro que te amou. Por isso o fim da história é adoração, e não desespero."],
+aplicacao:"Coloque hoje uma música de adoração que fale de Jesus como Cordeiro e cante junto. Deixe a adoração tomar o lugar da preocupação.",
+oracao:"Digno és Tu, Cordeiro de Deus, que foste morto e me compraste com o teu sangue. Obrigado porque a história está nas tuas mãos. Eu me junto ao céu para te adorar. Recebe minha vida como oferta. Amém.",
+pergunta:"Saber que a história está nas mãos do Cordeiro muda o quê na minha ansiedade sobre o futuro?",
+memorizar:"Apocalipse 5:12",memorizarNota:"O Cordeiro que foi morto é digno de receber todo poder, honra e glória."},
+
+24:{titulo:"Deus enxugará toda lágrima",leitura:"Apocalipse 7:9-17",
+contexto:"Depois de imagens de juízo, Apocalipse faz uma pausa e mostra o povo de Deus protegido. João vê uma multidão tão grande que ninguém consegue contar, de todas as nações, diante do trono.",
+reflexao:["Essa multidão está vestida de branco, com palmas nas mãos, celebrando a salvação que vem de Deus e do Cordeiro. Um ancião explica que eles vieram da grande tribulação e lavaram suas vestes no sangue do Cordeiro. Ninguém está ali por mérito próprio; todos foram lavados por Jesus.","Os versículos 16 e 17 descrevem o cuidado de Deus: nunca mais fome nem sede, o Cordeiro será o pastor deles e os guiará às fontes da água da vida, e Deus enxugará dos olhos deles toda lágrima. Repare: o Cordeiro do capítulo 5 é também o Pastor de João 10. Aquele que vai voltar é Aquele que vai te consolar para sempre."],
+aplicacao:"Pense numa dor que você carrega. Escreva-a no diário e, embaixo, escreva Apocalipse 7:17. Entregue-a a Deus, que um dia enxugará essa lágrima.",
+oracao:"Pai, obrigado porque estou entre os que foram lavados pelo sangue do Cordeiro, não por mérito, mas por graça. Obrigado porque um dia enxugarás toda lágrima. Enquanto esse dia não chega, guia-me às fontes de água viva. Amém.",
+pergunta:"Que lágrima eu mais anseio que Deus enxugue? Como essa promessa me ajuda hoje?",
+memorizar:"Apocalipse 7:17",memorizarNota:"O Cordeiro será o Pastor e Deus enxugará toda lágrima."},
+
+25:{titulo:"As bodas do Cordeiro",leitura:"Apocalipse 19:6-16",
+contexto:"Depois da queda da \"Babilônia\", símbolo do sistema mundial que se opõe a Deus, o céu explode em louvor. João vê a festa de casamento do Cordeiro e depois Jesus vindo como Rei vitorioso.",
+reflexao:["O céu proclama: Aleluia, o Senhor reina! Chegou o casamento do Cordeiro, e a noiva, que é a Igreja, se preparou. Ela recebeu um vestido de linho puro e brilhante. Lembra das dez moças de Mateus 25? A história termina numa festa. Felizes os convidados para a ceia das bodas do Cordeiro (v. 9).","Em seguida, Jesus aparece montado num cavalo branco, chamado Fiel e Verdadeiro, com o nome Rei dos reis e Senhor dos senhores. Ele vem fazer justiça e vencer o mal de vez. Para quem sofre injustiça, isso é esperança. Para a noiva, o Rei que vem guerrear contra o mal é o mesmo Noivo que vem buscá-la."],
+aplicacao:"Escreva no diário uma injustiça que te incomoda no mundo ou na sua vida. Entregue-a ao Fiel e Verdadeiro, que um dia fará justiça completa.",
+oracao:"Aleluia, Senhor, Tu reinas! Obrigado por me convidares para a festa do Cordeiro. Prepara-me como noiva pura para o teu Filho. Obrigado porque és Fiel e Verdadeiro e um dia farás justiça. Eu anseio pelo teu reino. Amém.",
+pergunta:"Como me sinto sabendo que fui convidado para a festa do casamento do Cordeiro?",
+memorizar:"Apocalipse 19:9",memorizarNota:"Felizes os convidados para a ceia das bodas do Cordeiro."},
+
+26:{titulo:"Meu nome está no Livro da Vida",leitura:"Apocalipse 20:11-15",
+contexto:"Apocalipse 20 fala do reinado de mil anos, que evangélicos interpretam de formas diferentes (pré-milenismo, amilenismo e pós-milenismo). Todos concordam com o final do capítulo: haverá um juízo diante de um grande trono branco.",
+reflexao:["Este é o texto que mais assusta quem tem medo do fim. Os mortos são julgados segundo suas obras, e livros são abertos. Mas há outro livro: o Livro da Vida. O que decide o destino é ter o nome escrito nele. E Jesus disse aos discípulos para se alegrarem justamente porque seus nomes estão escritos nos céus (Lucas 10:20).","Quem está em Cristo não enfrenta o juízo sozinho nem com as próprias obras como defesa. Jesus disse que quem ouve a sua palavra e crê já tem a vida eterna, não entra em juízo, mas passou da morte para a vida (João 5:24). E Paulo afirma que agora nenhuma condenação há para os que estão em Cristo Jesus. O juízo é real e sério, mas para você ele foi resolvido na cruz."],
+aplicacao:"Leia Romanos 8:1 e João 5:24. Se tiver dúvidas sobre sua salvação, converse com seu pastor esta semana. Se tiver certeza, agradeça a Deus por ter seu nome escrito no Livro da Vida.",
+oracao:"Senhor, o juízo é sério e eu não tenho nada para apresentar além de Jesus. Obrigado porque nEle não há condenação para mim. Obrigado porque meu nome está escrito no Livro da Vida pela tua graça. Tira do meu coração todo pavor e deixa a gratidão. Amém.",
+pergunta:"Diante do juízo final, minha confiança está nas minhas obras ou na obra de Jesus?",
+memorizar:"Romanos 8:1",memorizarNota:"Não há condenação para os que estão em Cristo Jesus."},
+
+27:{titulo:"Faço novas todas as coisas",leitura:"Apocalipse 21:1-7",
+contexto:"Depois do juízo, João vê o destino final do povo de Deus: novos céus e nova terra e a Nova Jerusalém descendo do céu, preparada como uma noiva.",
+reflexao:["A esperança cristã não é flutuar nas nuvens para sempre, mas viver com Deus num mundo renovado. A voz do trono anuncia o que Deus quis desde o Éden: o tabernáculo de Deus está com os homens, Ele habitará com eles e eles serão o seu povo. O que começou com a Palavra armando tenda entre nós (João 1:14) termina com Deus morando com seu povo para sempre.","Não haverá mais morte, nem luto, nem choro, nem dor, porque as primeiras coisas passaram. E Aquele que está no trono diz: faço novas todas as coisas. E ainda oferece de graça a água da vida a quem tem sede. Esse é o destino de quem espera Jesus. Não é um fim para temer, é um começo para desejar."],
+aplicacao:"Imagine por alguns minutos como será viver sem morte, dor e choro. Escreva no diário o que você mais espera viver na nova criação.",
+oracao:"Senhor, que esperança maravilhosa! Tu farás novas todas as coisas e morarás conosco para sempre. Eu tenho sede, dá-me da água da vida. Faz meu coração desejar mais esse dia do que temê-lo. Amém.",
+pergunta:"O que eu mais anseio na nova criação? Como isso pode mudar meu jeito de esperar?",
+memorizar:"Apocalipse 21:4",memorizarNota:"Deus enxugará toda lágrima, e não haverá mais morte, luto, choro nem dor."},
+
+28:{titulo:"Vem, Senhor Jesus!",leitura:"Apocalipse 22:12-21",
+contexto:"São as últimas palavras da Bíblia. Jesus repete três vezes neste capítulo que vem em breve. O livro termina com um convite e com uma oração da Igreja.",
+reflexao:["Jesus se apresenta como o Alfa e o Ômega, o princípio e o fim. Aquele que estava no começo da história (João 1) está também no fim. No versículo 17, o Espírito e a noiva dizem: vem! E o convite se estende a todos: quem tem sede, venha e beba de graça da água da vida. O último convite da Bíblia é de graça.","A Bíblia termina com Jesus dizendo: certamente venho sem demora. E com a resposta de João: Amém, vem, Senhor Jesus. Há 28 dias você começou este plano com medo da volta de Jesus. A oração de João é o alvo: que você possa dizer, com o coração cheio de esperança, vem, Senhor Jesus. A graça do Senhor Jesus seja com você."],
+aplicacao:"Releia o que você escreveu no diário no Dia 1 e compare com hoje. Agradeça a Deus pelo que mudou e termine com a oração mais curta da Bíblia: vem, Senhor Jesus.",
+oracao:"Senhor Jesus, Alfa e Ômega, princípio e fim, obrigado por esta caminhada. Tu trocaste o meu medo por esperança. Eu entrego minha vida a Ti hoje e todos os dias. Mantém minha lâmpada acesa até o dia em que eu te vir face a face. Amém. Vem, Senhor Jesus!",
+pergunta:"O que mudou em mim nestes 28 dias? Eu consigo orar hoje: vem, Senhor Jesus?",
+memorizar:"Apocalipse 22:20",memorizarNota:"Jesus promete que vem em breve, e a Igreja responde: vem, Senhor Jesus."}
+};
+
+const MOMENTOS={
+"Medo":{titulo:"Ele está com você",leitura:"Isaías 41:10-13",
+contexto:"Deus fala ao povo de Israel, que vivia ameaçado por nações mais fortes e se sentia pequeno e indefeso.",
+reflexao:["Deus não diz que não existem motivos para medo. Ele dá um motivo maior para a coragem: Eu estou com você. Ele promete fortalecer, ajudar e sustentar com a mão direita.","No versículo 13, Deus se apresenta como quem segura a sua mão e diz: não tenha medo, eu te ajudo. O medo diminui não quando o problema some, mas quando percebemos quem está ao nosso lado."],
+aplicacao:"Diga o seu medo em voz alta para Deus, com nome e detalhes. Depois leia Isaías 41:10 devagar, duas vezes.",
+oracao:"Senhor, estou com medo. Segura a minha mão como prometeste. Fortalece-me, ajuda-me e sustenta-me. Eu escolho confiar que Tu estás comigo. Amém.",
+pergunta:"Qual é o meu maior medo hoje? O que muda se Deus estiver segurando minha mão nele?",
+memorizar:"Isaías 41:10",memorizarNota:"Não tema: Deus está com você, te fortalece e te sustenta."},
+"Ansiedade":{titulo:"Lance sobre Ele",leitura:"Filipenses 4:4-9",
+contexto:"Paulo escreve da prisão, sem saber se seria solto ou executado. Mesmo assim, fala de alegria e paz para uma igreja que ele amava.",
+reflexao:["Paulo não diz apenas para parar de se preocupar. Ele mostra o que fazer com a preocupação: transformá-la em oração, com gratidão. Cada preocupação pode virar um pedido.","A promessa é que a paz de Deus, que vai além do que conseguimos entender, vai guardar o coração e a mente. E nos versículos 8 e 9 ele ensina a ocupar a mente com o que é verdadeiro, puro e bom."],
+aplicacao:"Faça uma lista das suas preocupações. Ao lado de cada uma, escreva um pedido a Deus e um motivo de gratidão.",
+oracao:"Pai, minha mente está acelerada. Eu entrego cada preocupação a Ti, com gratidão pelo que já fizeste. Guarda meu coração e minha mente com a tua paz. Amém.",
+pergunta:"Quais pensamentos têm alimentado minha ansiedade? Quais verdades posso colocar no lugar?",
+memorizar:"Filipenses 4:6-7",memorizarNota:"Em vez de ansiedade, oração com gratidão, e a paz de Deus guarda o coração."},
+"Recomeço":{titulo:"As misericórdias se renovam",leitura:"Lamentações 3:19-26",
+contexto:"Jeremias chora sobre Jerusalém destruída. Tudo parecia perdido, mas no meio do luto ele se lembra de algo que traz esperança.",
+reflexao:["O profeta não esconde a dor: ele se lembra da aflição e se sente abatido. Mas então decide trazer outra coisa à memória: as misericórdias do Senhor não têm fim e se renovam a cada manhã.","Recomeçar com Deus não depende de ter tudo resolvido. Depende da fidelidade dEle, que é grande. Cada manhã é uma nova porção de misericórdia, inclusive hoje."],
+aplicacao:"Escreva no diário o que você precisa deixar para trás e o primeiro pequeno passo do seu recomeço.",
+oracao:"Senhor, eu preciso recomeçar. Obrigado porque tuas misericórdias se renovam hoje. Grande é a tua fidelidade. Eu espero em Ti para o próximo passo. Amém.",
+pergunta:"O que Deus está me convidando a recomeçar? Qual é o primeiro passo?",
+memorizar:"Lamentações 3:22-23",memorizarNota:"As misericórdias de Deus não têm fim e se renovam a cada manhã."},
+"Tristeza e luto":{titulo:"Perto dos que têm o coração quebrado",leitura:"Salmo 34:15-22",
+contexto:"Davi escreveu este salmo depois de passar por um grande perigo, fugindo de Saul e fingindo loucura diante de um rei estrangeiro.",
+reflexao:["O salmo não promete uma vida sem dor; ele diz que o justo passa por muitas aflições. Mas promete presença: o Senhor está perto dos que têm o coração quebrado e salva os de espírito abatido.","Na tristeza, Deus não fica distante esperando você melhorar. Ele se aproxima. Jesus também chorou diante do túmulo de um amigo (João 11:35). Você pode chorar diante dEle."],
+aplicacao:"Permita-se chorar diante de Deus hoje. Depois, procure alguém de confiança da igreja e conte como você está.",
+oracao:"Senhor, meu coração está quebrado. Obrigado porque estás perto. Não preciso fingir força diante de Ti. Consola-me e sustenta-me neste tempo. Amém.",
+pergunta:"O que eu preciso dizer a Deus sobre a minha dor, sem filtro?",
+memorizar:"Salmo 34:18",memorizarNota:"O Senhor está perto dos que têm o coração quebrado."},
+"Culpa":{titulo:"Perdão completo",leitura:"1 João 1:5-2:2",
+contexto:"João escreve para cristãos que precisavam lidar com o pecado de forma honesta: nem fingindo que não pecam, nem vivendo afundados na culpa.",
+reflexao:["Se dissermos que não temos pecado, enganamos a nós mesmos. Mas se confessarmos, Deus é fiel e justo para perdoar e purificar de toda injustiça. Perdão não depende do tamanho da nossa tristeza, mas da fidelidade de Deus.","E se pecarmos, temos um Advogado junto ao Pai: Jesus Cristo, o Justo. Ele é a propiciação pelos nossos pecados. A culpa aponta para o problema; Jesus é a solução completa."],
+aplicacao:"Confesse a Deus, de forma específica, aquilo que pesa na sua consciência. Se feriu alguém, peça perdão a essa pessoa.",
+oracao:"Pai, eu confesso o meu pecado diante de Ti. Obrigado porque és fiel e justo para me perdoar por causa de Jesus. Purifica-me e tira de mim o peso da culpa. Amém.",
+pergunta:"Há algo que eu ainda não confessei a Deus? Por que tenho segurado isso?",
+memorizar:"1 João 1:9",memorizarNota:"Se confessarmos, Deus é fiel e justo para perdoar e purificar."},
+"Solidão":{titulo:"Nunca te deixarei",leitura:"Hebreus 13:5-8",
+contexto:"O autor escreve para cristãos que perderam bens e posição por causa da fé e se sentiam desamparados.",
+reflexao:["O texto cita uma promessa antiga de Deus: de maneira nenhuma te deixarei, nunca jamais te abandonarei. A solidão é real, mas não é a verdade final sobre você.","Por isso podemos dizer com confiança: o Senhor é o meu ajudador. E o versículo 8 lembra que Jesus é o mesmo ontem, hoje e para sempre. Ele não muda quando as pessoas se afastam."],
+aplicacao:"Converse com Deus como quem conversa com um amigo. Depois, dê um passo em direção a alguém: mande uma mensagem ou participe de um encontro da igreja.",
+oracao:"Senhor, eu me sinto sozinho. Obrigado porque nunca me deixas nem me abandonas. Sê o meu ajudador e coloca pessoas na minha vida para caminharem comigo. Amém.",
+pergunta:"Quem Deus pode estar colocando perto de mim para eu não caminhar sozinho?",
+memorizar:"Hebreus 13:5",memorizarNota:"Deus prometeu: nunca te deixarei, jamais te abandonarei."},
+"Dúvida":{titulo:"Eu creio, ajuda-me",leitura:"Marcos 9:14-29",
+contexto:"Um pai traz o filho atormentado até os discípulos, que não conseguem ajudá-lo. Então ele vai até Jesus, já cansado e com a fé abalada.",
+reflexao:["O pai diz a Jesus: se puderes fazer alguma coisa, ajuda-nos. Jesus responde que tudo é possível ao que crê. E o pai faz uma das orações mais sinceras da Bíblia: eu creio, ajuda-me na minha falta de fé.","Jesus não rejeita esse pai pela fé misturada com dúvida; Ele cura o filho. Fé não é ausência de dúvida, é levar a dúvida até Jesus. Uma fé pequena num Deus grande é suficiente."],
+aplicacao:"Escreva sua dúvida com honestidade e ore a oração deste pai. Procure seu pastor ou alguém maduro para conversar sobre ela.",
+oracao:"Senhor, eu creio, mas ajuda-me na minha falta de fé. Recebe minhas dúvidas e mostra-te a mim. Amém.",
+pergunta:"Que dúvida eu tenho escondido? O que aconteceria se eu a levasse a Jesus?",
+memorizar:"Marcos 9:24",memorizarNota:"Eu creio, Senhor; ajuda-me na minha falta de fé."},
+"Cansaço":{titulo:"Venham a mim",leitura:"Mateus 11:25-30",
+contexto:"Jesus fala a pessoas sobrecarregadas pelas exigências religiosas dos líderes da época e pelo peso da vida.",
+reflexao:["Jesus convida os cansados e sobrecarregados e promete descanso. Ele não pede que você se recupere antes de vir; o convite é justamente para quem está sem forças.","Ele fala de um jugo suave e de um fardo leve. Seguir Jesus não é carregar sozinho, é caminhar junto com Aquele que é manso e humilde de coração. O descanso começa quando paramos de tentar dar conta de tudo sozinhos."],
+aplicacao:"Hoje, separe um tempo real de descanso, sem telas, e entregue a Deus uma responsabilidade que você tem carregado sozinho.",
+oracao:"Senhor Jesus, estou cansado. Eu venho a Ti como pediste. Dá-me descanso para a alma. Ensina-me a caminhar contigo no teu ritmo, manso e humilde. Amém.",
+pergunta:"Que peso eu tenho carregado que Jesus nunca me pediu para carregar sozinho?",
+memorizar:"Mateus 11:28",memorizarNota:"Jesus convida os cansados e promete descanso."}
+};
+
+const WEEKS=["Conhecendo quem vai voltar","A esperança da Igreja","Jesus ensina sobre a sua volta","O fim da história"];
+const REFS=["João 1","João 3","João 10","João 11","João 14","João 17","João 20–21",
+"1 Tessalonicenses 1–2","1 Tessalonicenses 3–4","1 Tessalonicenses 5","2 Tessalonicenses 1–3","1 Coríntios 15","Filipenses 3","1 João 3–4",
+"Mateus 24:1-31","Mateus 24:32-51","Mateus 25:1-13","Mateus 25:14-46","Lucas 12:35-48","Atos 1:1-11","2 Pedro 3",
+"Apocalipse 1","Apocalipse 4–5","Apocalipse 7","Apocalipse 19","Apocalipse 20","Apocalipse 21","Apocalipse 22"];
+const PERFIL="Leitor evangélico, usa a Nova Almeida Atualizada (NAA), nível intermediário. Está vivendo medo da volta de Jesus, quer entendê-la e quer entregar a vida a Cristo.";
+
+const $=id=>document.getElementById(id);
+let db=null,uid=null;
+let progress={done:{}};
+let sel=1, dayData={}, li={}, view="inicio";
+
+// ícone do app
+(function(){if(!$("ico"))return;const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#F6EBD3"/><path d="M32 11c4.5 6.5 9 10 9 17a9 9 0 0 1-18 0c0-7 4.5-10.5 9-17z" fill="#9A6B12"/><path d="M19 46h26M24 52h16" stroke="#9A6B12" stroke-width="3.5" stroke-linecap="round"/><path d="M28.5 37h7v8h-7z" fill="#9A6B12"/></svg>`;
+ const u="data:image/svg+xml,"+encodeURIComponent(svg);$("ico").href=u;$("aico").href=u})();
+
+let PFX=null; // prefixo dos dados da pessoa que entrou
+function rGet(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
+function rSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function lsGet(k){return PFX?rGet(PFX+k):null}
+function lsSet(k,v){if(PFX)rSet(PFX+k,v)}
+let remote=null; // armazenamento na conta: {get(k), set(k,v)}
+async function sGet(k){
+  if(remote){try{const v=await remote.get(k);if(v!=null){lsSet(k,v);return v}}catch(e){}}
+  return lsGet(k);
+}
+async function sSet(k,v){lsSet(k,v);if(remote){try{await remote.set(k,v)}catch(e){}}}
+
+function firstOpen(){for(let i=1;i<=28;i++)if(!progress.done[i])return i;return 28}
+function allDayData(){const o={};for(let d=1;d<=28;d++){o[d]=dayData[d]||lsGet("dia-"+d)||{}}return o}
+function dayKey(t){const x=new Date(t);return x.getFullYear()*10000+(x.getMonth()+1)*100+x.getDate()}
+function streak(){
+  const set=new Set(Object.values(progress.done).map(dayKey));if(!set.size)return 0;
+  let c=new Date(),n=0;if(!set.has(dayKey(c))){c.setDate(c.getDate()-1);if(!set.has(dayKey(c)))return 0}
+  while(set.has(dayKey(c))){n++;c.setDate(c.getDate()-1)}return n;
+}
+
+/* ---------- Navegação ---------- */
+const VIEWS=["inicio","dia","plano","momentos","diario"];
+function show(v,push=true){
+  if(!VIEWS.includes(v))v="inicio";view=v;
+  VIEWS.forEach(x=>$("v-"+x).hidden=x!==v);
+  document.querySelectorAll(".tab").forEach(t=>{if(t.dataset.v===v)t.setAttribute("aria-current","page");else t.removeAttribute("aria-current")});
+  if(v==="inicio")renderHome();
+  if(v==="plano")renderPlan();
+  if(v==="diario")renderJournal();
+  if(v==="dia")openDay(sel);
+  if(push){try{if(location.hash!=="#"+v)history.replaceState(null,"","#"+v)}catch(e){}}
+  window.scrollTo(0,0);
+}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{if(t.dataset.v==="dia")sel=firstOpen();show(t.dataset.v)});
+window.addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(h&&h!==view)show(h,false)});
+
+/* ---------- Painel ---------- */
+function segBar(w){
+  const g=document.createElement("div");g.className="wk";
+  for(let d=w*7+1;d<=w*7+7;d++){const b=document.createElement("button");
+    b.className="seg"+(progress.done[d]?" done":"");
+    b.setAttribute("aria-label",`Dia ${d}: ${REFS[d-1]}${progress.done[d]?" (concluído)":""}`);
+    b.onclick=()=>{sel=d;show("dia")};g.appendChild(b)}
+  return g;
+}
+function renderHome(){
+  const h=new Date().getHours();
+  $("greet").textContent=(h<12?"Bom dia":h<18?"Boa tarde":"Boa noite")+". Que a Palavra ilumine o seu caminho hoje.";
+  const n=Object.keys(progress.done).length, d=firstOpen(), fin=n>=28;
+  $("ringN").textContent=n;$("ringArc").style.strokeDashoffset=263.9*(1-n/28);
+  $("todayEyebrow").textContent=fin?"Plano concluído":`Dia ${d} de 28`;
+  $("todayTitle").textContent=fin?"Vem, Senhor Jesus!":DEVOS[d].titulo;
+  $("todayRef").textContent=fin?"Você completou os 28 dias. Pode reler qualquer dia quando quiser.":`Leitura: ${REFS[d-1]}`;
+  $("goToday").textContent=fin?"Rever o plano":(n?"Continuar a leitura":"Começar o Dia 1");
+  $("stDone").textContent=n;$("stStreak").textContent=streak();
+  const all=allDayData();$("stJournal").textContent=Object.values(all).filter(x=>(x.journal||"").trim()).length;
+  const wk=$("weeks");wk.textContent="";
+  WEEKS.forEach((w,i)=>{let c=0;for(let x=i*7+1;x<=i*7+7;x++)if(progress.done[x])c++;
+    const r=document.createElement("div");r.className="wkrow";
+    const t=document.createElement("div");t.className="t";
+    const a=document.createElement("span");a.textContent=`Semana ${i+1} · ${w}`;
+    const b=document.createElement("span");b.textContent=`${c}/7`;t.append(a,b);
+    r.append(t,segBar(i));wk.appendChild(r)});
+  const md=DEVOS[fin?28:d];$("memoRef").textContent=md.memorizar;$("memoTxt").textContent=md.memorizarNota;
+  chips($("homeChips"),k=>{show("momentos");openMoment(k)});
+}
+$("goToday").onclick=()=>{if(Object.keys(progress.done).length>=28){show("plano")}else{sel=firstOpen();show("dia")}};
+
+/* ---------- Devocional ---------- */
+function para(t){const p=document.createElement("p");p.textContent=t;return p}
+function sec(label,content,cls){const s=document.createElement("div");s.className="sec"+(cls?" "+cls:"");
+  const l=document.createElement("span");l.className="lbl";l.textContent=label;s.appendChild(l);
+  (Array.isArray(content)?content:[content]).filter(Boolean).forEach(t=>s.appendChild(para(t)));return s}
+function renderDevo(el,d){
+  el.textContent="";
+  const h=document.createElement("h3");h.textContent=d.titulo;el.appendChild(h);
+  el.append(sec("Leitura",d.leitura),sec("Contexto",d.contexto),sec("Reflexão",d.reflexao),
+    sec("Aplicação para hoje",d.aplicacao),sec("Oração",d.oracao,"pray"),
+    sec("Pergunta para o diário",d.pergunta),sec("Versículo para memorizar",[d.memorizar,d.memorizarNota],"verse"));
+  el.hidden=false;
+}
+
+/* ---------- Dia ---------- */
+async function openDay(d){
+  sel=d;const dv=DEVOS[d];
+  $("ref").textContent=REFS[d-1];
+  $("wkname").textContent=`Dia ${d} de 28 · ${WEEKS[Math.floor((d-1)/7)]}`;
+  $("prev").disabled=d===1;$("next").disabled=d===28;
+  const data=dayData[d]||(await sGet("dia-"+d))||{};
+  if(sel!==d)return;dayData[d]=data;
+  const opened=!!data.aberto||!!progress.done[d];
+  const read=li[d]||opened;
+  $("s1").classList.toggle("ok",read);$("li").hidden=read;
+  $("s2").classList.toggle("ok",opened);
+  $("abrir").hidden=opened;
+  if(opened)renderDevo($("devo"),dv);else{$("devo").hidden=true;$("devo").textContent=""}
+  $("jq").textContent=dv.pergunta;
+  $("journal").value=data.journal||"";$("saved").textContent=data.journal?"Salvo neste aparelho":"";
+  $("s3").classList.toggle("ok",!!(data.journal||"").trim());
+  const done=!!progress.done[d];$("s4").classList.toggle("ok",done);
+  $("concluir").textContent=done?"Dia concluído ✓":"Concluir o dia";$("concluir").disabled=done;
+}
+$("li").onclick=()=>{li[sel]=true;$("s1").classList.add("ok");$("li").hidden=true};
+$("prev").onclick=()=>{openDay(sel-1);window.scrollTo(0,0)};
+$("next").onclick=()=>{openDay(sel+1);window.scrollTo(0,0)};
+$("abrir").onclick=async()=>{
+  const d=sel;li[d]=true;const data=dayData[d]||{};data.aberto=true;dayData[d]=data;
+  openDay(d);await sSet("dia-"+d,data);
+};
+let jt=null;
+$("journal").oninput=()=>{
+  const d=sel,v=$("journal").value;$("saved").textContent="Salvando…";clearTimeout(jt);
+  jt=setTimeout(async()=>{const data=dayData[d]||{};data.journal=v;data.editado=Date.now();dayData[d]=data;await sSet("dia-"+d,data);
+    if(sel===d){$("saved").textContent="Salvo neste aparelho";$("s3").classList.toggle("ok",!!v.trim())}},600);
+};
+$("concluir").onclick=async()=>{
+  const d=sel;progress.done[d]=Date.now();
+  const data=dayData[d]||{};data.aberto=true;dayData[d]=data;
+  await sSet("progresso",progress);await sSet("dia-"+d,data);
+  openDay(d);const nx=firstOpen();
+  if(nx!==d&&!progress.done[nx])$("concluir").textContent=`Dia concluído ✓  Próximo: ${REFS[nx-1]}`;
+};
+
+/* ---------- Plano ---------- */
+function renderPlan(){
+  const pl=$("plan");pl.textContent="";const cur=firstOpen();
+  WEEKS.forEach((w,i)=>{const s=document.createElement("div");const h=document.createElement("h3");
+    h.textContent=`Semana ${i+1} · ${w}`;s.appendChild(h);const ul=document.createElement("ul");
+    for(let d=i*7+1;d<=i*7+7;d++){const lx=document.createElement("li");if(d===cur&&!progress.done[d])lx.className="cur";
+      const b=document.createElement("button");b.onclick=()=>{sel=d;show("dia")};
+      const a=document.createElement("span");a.className="d";a.textContent="Dia "+d;
+      const tt=document.createElement("span");tt.className="tt";
+      const r=document.createElement("span");r.textContent=REFS[d-1];
+      const sm=document.createElement("small");sm.textContent=DEVOS[d].titulo;tt.append(r,sm);
+      const c=document.createElement("span");c.className="ck";c.textContent=progress.done[d]?"✓":"";
+      b.append(a,tt,c);lx.appendChild(b);ul.appendChild(lx)}
+    s.appendChild(ul);pl.appendChild(s)});
+}
+
+/* ---------- Momentos ---------- */
+let momSel=null;
+function chips(el,fn){el.textContent="";Object.keys(MOMENTOS).forEach(k=>{const b=document.createElement("button");
+  b.className="chip"+(el.id==="momChips"&&k===momSel?" on":"");b.textContent=k;b.onclick=()=>fn(k);el.appendChild(b)})}
+function openMoment(k){momSel=k;chips($("momChips"),openMoment);renderDevo($("momDevo"),MOMENTOS[k]);$("momCard").hidden=false;
+  setTimeout(()=>$("momCard").scrollIntoView({behavior:"smooth",block:"start"}),50)}
+chips($("momChips"),openMoment);
+
+/* Dúvidas: só aparece quando o app está aberto pelo Claude */
+let sampleFn=null,sampleTried=false;
+async function getSample(){if(sampleTried)return sampleFn;sampleTried=true;
+  try{sampleFn=window.claude?.use?await window.claude.use("sample"):null}catch(e){sampleFn=null}return sampleFn}
+if(window.claude?.use)$("askCard").hidden=false;
+$("qBtn").onclick=async()=>{
+  const q=$("q").value.trim();if(!q)return;const a=$("ans");a.hidden=false;a.textContent="Pensando…";$("qBtn").disabled=true;
+  try{const s=await getSample();if(!s)throw {code:"indisponivel"};
+    const r=await s(`Você é um companheiro de estudo bíblico evangélico. Perfil: ${PERFIL}\nResponda em português do Brasil, em texto simples sem markdown, com até 4 parágrafos curtos. Seja fiel ao texto, honesto sobre passagens difíceis, indique referências exatas e, quando houver interpretações diferentes entre evangélicos, apresente as principais com respeito. Não transcreva trechos longos da Bíblia.\n\nPergunta: ${q}`,{modelTier:"default",cache:false,onText:u=>{a.textContent=u.text}});
+    a.textContent=r.text}
+  catch(e){a.textContent=e?.code==="rate_limited"?"Muitos pedidos seguidos. Espere um minuto e tente de novo.":"Esta função precisa de internet e só funciona quando o app é aberto pelo Claude."}
+  finally{$("qBtn").disabled=false}
+};
+$("q").onkeydown=e=>{if(e.key==="Enter")$("qBtn").click()};
+
+/* ---------- Diário ---------- */
+function renderJournal(){
+  const el=$("entries");el.textContent="";const all=allDayData();let any=false;
+  for(let d=1;d<=28;d++){const j=(all[d].journal||"").trim();if(!j)continue;any=true;
+    const e=document.createElement("div");e.className="entry";
+    const h=document.createElement("div");h.className="h";
+    const t=document.createElement("span");t.textContent=`Dia ${d} · ${REFS[d-1]}`;
+    const b=document.createElement("button");b.textContent="Abrir";b.onclick=()=>{sel=d;show("dia")};
+    h.append(t,b);e.append(h,para(j));el.appendChild(e)}
+  if(!any){el.appendChild(para("Seu diário ainda está vazio. Ao fazer a leitura do dia, escreva o que Deus falou com você."));el.firstChild.className="hint"}
+}
+function backup(){const o={app:"lampada-para-os-pes",versao:3,criado:new Date().toISOString(),dados:{}};
+  o.dados.progresso=JSON.stringify(progress);
+  const all=allDayData();for(let d=1;d<=28;d++)if(Object.keys(all[d]).length)o.dados["dia-"+d]=JSON.stringify(all[d]);
+  return JSON.stringify(o)}
+function bk(m){$("bkMsg").textContent=m}
+$("exp").onclick=()=>{
+  try{const blob=new Blob([backup()],{type:"application/json"});const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);a.download="lampada-backup-"+new Date().toISOString().slice(0,10)+".json";
+    document.body.appendChild(a);a.click();a.remove();bk("Cópia salva. Se nada foi baixado, use \"Copiar cópia\".")}
+  catch(e){bk("Não foi possível salvar aqui. Use \"Copiar cópia\".")}
+};
+$("cpy").onclick=async()=>{try{await navigator.clipboard.writeText(backup());bk("Cópia copiada. Cole num bloco de notas ou mande para você mesmo.")}
+  catch(e){$("impTxt").value=backup();$("impTxt").select();bk("Selecionei o texto da cópia acima. Copie e guarde.")}};
+function restore(txt){
+  try{const o=JSON.parse(txt);if(!o||o.app!=="lampada-para-os-pes"||!o.dados)throw 0;
+    Object.entries(o.dados).forEach(([k,v])=>{const key=k.replace(/^lamp:/,"");if(key==="progresso"||/^dia-\d+$/.test(key))lsSet(key,JSON.parse(v))});
+    progress=lsGet("progresso")||{done:{}};dayData={};
+    (async()=>{if(remote){await sSet("progresso",progress);for(let d=1;d<=28;d++){const v=lsGet("dia-"+d);if(v)await sSet("dia-"+d,v)}}})();
+    bk("Tudo restaurado.");renderJournal()}
+  catch(e){bk("Esse texto não é uma cópia válida do Lâmpada para os Pés.")}
+}
+$("impBtn").onclick=()=>{const t=$("impTxt").value.trim();if(t)restore(t)};
+$("impFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>restore(r.result);r.readAsText(f);e.target.value=""};
+
+/* ---------- Entrada: conta do Claude ou perfil com PIN ---------- */
+const PK="lamp:perfis";
+function perfis(){return rGet(PK)||[]}
+function lk(which){["lkWait","lkList","lkPin","lkNew","lkCloud"].forEach(x=>$(x).hidden=x!==which);$("lock").hidden=false}
+async function hashPin(pin,salt){
+  const s=salt+":"+pin;
+  try{if(crypto?.subtle){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));
+    return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}}catch(e){}
+  let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return "f"+(h>>>0).toString(16);
+}
+function rid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+function inicial(n){return (n||"?").trim().charAt(0).toUpperCase()}
+
+function entrar(prefix,nome){
+  PFX=prefix;dayData={};li={};
+  progress=lsGet("progresso")||{done:{}};
+  sel=firstOpen();
+  $("who").hidden=!nome;$("whoName").textContent=nome?"Perfil: "+nome:"";
+  $("lock").hidden=true;
+  show(location.hash.slice(1)||"inicio",false);
+}
+function listaPerfis(){
+  const ps=perfis();if(!ps.length){novoPerfil();return}
+  const el=$("plist");el.textContent="";
+  ps.forEach(p=>{const b=document.createElement("button");b.className="pbtn";b.type="button";
+    const a=document.createElement("span");a.className="av";a.textContent=inicial(p.nome);
+    const n=document.createElement("span");n.textContent=p.nome;b.append(a,n);
+    b.onclick=()=>pedirPin(p);el.appendChild(b)});
+  lk("lkList");
+}
+let pinAlvo=null;
+function pedirPin(p){pinAlvo=p;$("pinAv").textContent=inicial(p.nome);$("pinName").textContent=p.nome;
+  $("pinIn").value="";$("pinErr").textContent="";lk("lkPin");setTimeout(()=>$("pinIn").focus(),50)}
+$("lkPin").onsubmit=async e=>{e.preventDefault();const v=$("pinIn").value;
+  if(!/^\d{4}$/.test(v)){$("pinErr").textContent="O PIN tem 4 números.";return}
+  if(await hashPin(v,pinAlvo.salt)!==pinAlvo.hash){$("pinErr").textContent="PIN incorreto.";$("pinIn").value="";return}
+  try{sessionStorage.setItem("lamp:ativo",pinAlvo.id)}catch(e){}
+  entrar("lamp:p:"+pinAlvo.id+":",pinAlvo.nome)};
+$("pinIn").oninput=()=>{if($("pinIn").value.length===4)$("lkPin").requestSubmit()};
+$("pinBack").onclick=listaPerfis;
+function novoPerfil(){["nNome","nPin","nPin2"].forEach(x=>$(x).value="");$("nErr").textContent="";
+  $("nBack").hidden=!perfis().length;lk("lkNew");setTimeout(()=>$("nNome").focus(),50)}
+$("novo").onclick=novoPerfil;$("nBack").onclick=listaPerfis;
+$("lkNew").onsubmit=async e=>{e.preventDefault();
+  const nome=$("nNome").value.trim(),a=$("nPin").value,b=$("nPin2").value,ps=perfis();
+  if(!nome){$("nErr").textContent="Digite seu nome.";return}
+  if(ps.some(p=>p.nome.toLowerCase()===nome.toLowerCase())){$("nErr").textContent="Já existe um perfil com esse nome.";return}
+  if(!/^\d{4}$/.test(a)){$("nErr").textContent="O PIN precisa ter 4 números.";return}
+  if(a!==b){$("nErr").textContent="Os dois PINs não são iguais.";return}
+  const p={id:rid(),nome,salt:rid()};p.hash=await hashPin(a,p.salt);
+  const pre="lamp:p:"+p.id+":";
+  // o primeiro perfil recebe os dados que já estavam neste aparelho (versão sem perfis)
+  if(!ps.length){const old=rGet("lamp:progresso");if(old)rSet(pre+"progresso",old);
+    for(let d=1;d<=28;d++){const v=rGet("lamp:dia-"+d);if(v)rSet(pre+"dia-"+d,v)}}
+  ps.push(p);rSet(PK,ps);
+  try{sessionStorage.setItem("lamp:ativo",p.id)}catch(e){}
+  entrar(pre,nome)};
+
+function modoLocal(){
+  let ativo=null;try{ativo=sessionStorage.getItem("lamp:ativo")}catch(e){}
+  const p=perfis().find(x=>x.id===ativo);
+  if(p)entrar("lamp:p:"+p.id+":",p.nome);else listaPerfis();
+}
+
+/* ---------- Nuvem (Firebase): usuário + PIN valem em qualquer aparelho ---------- */
+const FBV="10.12.2", FB="https://www.gstatic.com/firebasejs/"+FBV+"/";
+const DOMINIO="@lampada-para-os-pes.app";
+function nuvemConfigurada(){const c=window.FIREBASE_CONFIG;return !!(c&&c.apiKey&&!/COLE/.test(c.apiKey))}
+function slugUser(s){return s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim().replace(/\s+/g,".").replace(/[^a-z0-9._-]/g,"")}
+let fb=null,cMode="in";
+function cTab(m){cMode=m;$("cTabIn").classList.toggle("on",m==="in");$("cTabNew").classList.toggle("on",m==="new");
+  $("cPin2Wrap").hidden=m!=="new";$("cGo").textContent=m==="new"?"Criar e entrar":"Entrar";
+  $("cHint").textContent=m==="new"?"Escolha um usuário e crie seu PIN de 6 números. Depois é só usar os mesmos dados em qualquer aparelho.":"Entre com seu usuário e PIN. Funciona em qualquer aparelho.";
+  $("cPin").autocomplete=m==="new"?"new-password":"current-password";$("cErr").textContent=""}
+$("cTabIn").onclick=()=>cTab("in");$("cTabNew").onclick=()=>cTab("new");
+function erroNuvem(e){const c=e?.code||"";
+  if(/invalid-credential|wrong-password|user-not-found|invalid-login/.test(c))return "Usuário ou PIN incorreto.";
+  if(/email-already-in-use/.test(c))return "Esse usuário já existe. Escolha outro nome ou toque em Entrar.";
+  if(/too-many-requests/.test(c))return "Muitas tentativas. Espere alguns minutos e tente de novo.";
+  if(/network-request-failed/.test(c)||!navigator.onLine)return "Sem internet. Para entrar pela primeira vez num aparelho é preciso estar conectado.";
+  if(/operation-not-allowed|configuration-not-found/.test(c))return "O login ainda não foi ativado no Firebase (veja o passo a passo).";
+  return "Não foi possível entrar agora. Tente de novo.";}
+$("lkCloud").onsubmit=async e=>{e.preventDefault();
+  const u=slugUser($("cUser").value),p=$("cPin").value;
+  if(u.length<3){$("cErr").textContent="O usuário precisa ter pelo menos 3 letras ou números.";return}
+  if(!/^\d{6}$/.test(p)){$("cErr").textContent="O PIN precisa ter 6 números.";return}
+  if(cMode==="new"&&p!==$("cPin2").value){$("cErr").textContent="Os dois PINs não são iguais.";return}
+  if(!fb){$("cErr").textContent="Carregando… tente de novo em instantes.";return}
+  $("cGo").disabled=true;$("cErr").textContent="";
+  try{
+    if(cMode==="new"){const r=await fb.auth.createUserWithEmailAndPassword(fb.a,u+DOMINIO,p);
+      fb.fs.setDoc(fb.fs.doc(fb.db,"usuarios",r.user.uid,"dados","perfil"),{usuario:u,criado:Date.now()}).catch(()=>{});}
+    else await fb.auth.signInWithEmailAndPassword(fb.a,u+DOMINIO,p);
+    $("cPin").value="";$("cPin2").value="";
+  }catch(err){$("cErr").textContent=erroNuvem(err)}
+  finally{$("cGo").disabled=false}
+};
+async function modoNuvem(){
+  lk("lkWait");$("lkFoot").textContent="Seu progresso e seu diário ficam salvos na sua conta e funcionam sem internet depois do primeiro acesso.";
+  try{
+    const [app,auth,fs]=await Promise.all([import(FB+"firebase-app.js"),import(FB+"firebase-auth.js"),import(FB+"firebase-firestore.js")]);
+    const ap=app.initializeApp(window.FIREBASE_CONFIG);
+    const a=auth.initializeAuth(ap,{persistence:[auth.indexedDBLocalPersistence,auth.browserLocalPersistence]});
+    let db2;try{db2=fs.initializeFirestore(ap,{localCache:fs.persistentLocalCache()})}catch(e){db2=fs.getFirestore(ap)}
+    fb={a,auth,fs,db:db2};
+    auth.onAuthStateChanged(a,async user=>{
+      if(!user){remote=null;PFX=null;progress={done:{}};dayData={};cTab("in");lk("lkCloud");return}
+      const id=user.uid,ref=k=>fs.doc(db2,"usuarios",id,"dados",k);
+      remote={get:async k=>{let s;try{s=await fs.getDoc(ref(k))}catch(e){s=await fs.getDocFromCache(ref(k))}return s.exists()?s.data():null},
+              set:(k,v)=>{fs.setDoc(ref(k),v).catch(()=>{})}}; // grava no aparelho na hora e envia quando houver internet
+      PFX="lamp:c:"+id+":";
+      const r=await sGet("progresso");progress=r&&r.done?r:{done:{}};
+      dayData={};for(let x=1;x<=28;x++){const v=lsGet("dia-"+x);if(v)dayData[x]=v}
+      const nome=(user.email||"").replace(DOMINIO,"");
+      entrar(PFX,nome);$("whoName").textContent="Usuário: "+nome;
+      for(let x=1;x<=28;x++){sGet("dia-"+x).then(v=>{if(v){dayData[x]=v;if(view==="diario")renderJournal()}})}
+    });
+  }catch(e){
+    // sem internet na primeira vez ou Firebase indisponível: usa os perfis do aparelho
+    $("lkFoot").textContent="Não consegui conectar ao login online. Usando os perfis deste aparelho.";modoLocal();
+  }
+}
+$("sair").onclick=()=>{
+  if(fb&&remote){fb.auth.signOut(fb.a);return}
+  try{sessionStorage.removeItem("lamp:ativo")}catch(e){}PFX=null;progress={done:{}};dayData={};listaPerfis()};
+
+/* ---------- Início ---------- */
+if(window.claude?.use){
+  // Aberto pelo Claude: a conta de cada pessoa é o login, e os dados ficam guardados na conta dela
+  lk("lkWait");
+  (async()=>{
+    let ok=false;
+    try{
+      const t=new Promise(r=>setTimeout(()=>r([null,null]),10000));
+      const [d,u]=await Promise.race([Promise.all([window.claude.use("db"),window.claude.use("user")]),t]);
+      if(d&&u){uid=await u.id();if(uid){db=d;ok=true}}
+    }catch(e){}
+    if(!ok){modoLocal();return}
+    PFX="lamp:u:"+uid+":";
+    remote={get:async k=>{const s=await db.doc(`data/users/${uid}/${k}`).get();return s.exists?s.data():null},
+            set:(k,v)=>db.doc(`data/users/${uid}/${k}`).set(v)};
+    const remote=await sGet("progresso");progress=remote&&remote.done?remote:{done:{}};
+    for(let x=1;x<=28;x++){const v=await sGet("dia-"+x);if(v)dayData[x]=v}
+    $("who").hidden=false;$("whoName").textContent="Salvo na sua conta do Claude";$("sair").hidden=true;
+    sel=firstOpen();$("lock").hidden=true;show(location.hash.slice(1)||"inicio",false);
+  })();
+}else if(nuvemConfigurada()){
+  modoNuvem();
+}else{
+  modoLocal();
+}
+</script>
+<script>
+if("serviceWorker" in navigator&&location.protocol.startsWith("http")){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>
